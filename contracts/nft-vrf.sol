@@ -21,7 +21,6 @@ contract MyNFT is ERC721, VRFConsumerBase {
     uint fee = 150 gwei;
 
     struct Traits {
-        string name;
         uint energy;
         uint speed;
         uint experience;
@@ -36,7 +35,6 @@ contract MyNFT is ERC721, VRFConsumerBase {
     event Minted(
         uint indexed tokenId,
         address indexed owner,
-        string name,
         uint energy,
         uint speed,
         uint experience,
