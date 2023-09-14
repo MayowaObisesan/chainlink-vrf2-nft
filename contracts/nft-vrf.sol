@@ -11,6 +11,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 contract MyNFT is ERC721, VRFConsumerBase {
     // Contract code goes here
     string public baseTokenURI;
+    uint public tokenIdCounter;
 
     // CHAINLINK VRF NEEDED VALUES - Gotten from my ChainLink Subscription
     address private vrfCoordinator = 0x2ca8e0c643bde4c2e08ab1fa0da3401adad7734d;
@@ -20,15 +21,29 @@ contract MyNFT is ERC721, VRFConsumerBase {
     uint fee = 150 gwei;
 
     struct Traits {
+        string name;
         uint energy;
         uint speed;
         uint experience;
-        string manna;
         uint health;
         uint gem;
+        bool rare;
     }
 
     mapping(uint => Traits) tokenTraits;
+
+    // Events
+    event Minted(
+        uint indexed tokenId,
+        address indexed owner,
+        string name,
+        uint energy,
+        uint speed,
+        uint experience,
+        uint health,
+        uint gem,
+        bool rare
+    );
 
     // constructor() ERC721("DummyNFT", "NFT") {
     //     baseTokenURI = "";
@@ -49,10 +64,12 @@ contract MyNFT is ERC721, VRFConsumerBase {
         // Constructor code goes here
     }
 
-    function mint() external {
-        uint256 tokenId = totalSupply() + 1;
-        _safeMint(msg.sender, tokenId);
-        requestRandomTraits(tokenId);
+    function mint(address recepient) external {
+        require(recepient != address(0), "Cannot mint to address zero");
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK tokens");
+        // uint tokenId = totalSupply() + 1;
+        _safeMint(recepient, tokenIdCounter);
+        requestRandomTraits(tokenIdCounter);
     }
 
     function requestRandomTraits(uint256 tokenId) internal returns (bytes32) {
@@ -64,10 +81,44 @@ contract MyNFT is ERC721, VRFConsumerBase {
 
     function fulfillRandomness(
         bytes32 requestId,
-        uint256 randomness
+        uint randomness
     ) internal override {
         // Generate the traits based on the randomness
         // Store the traits for the corresponding tokenId
+
+        require(
+            msg.sender == vrfCoordinator,
+            "Only VRF coordinator can fulfill"
+        );
+        uint energy = randomness % 101; // Random number between 0 and 100
+        uint speed = randomness % 101; // Another random number between 0 and 100
+        uint health = randomness % 101;
+        uint gem = randomness % 10;
+        bool rare = false;
+        uint experience = 0;
+
+        // Create a new NFT with these traits
+        Traits memory attributes = Traits(
+            energy,
+            speed,
+            experience,
+            health,
+            gem,
+            rare
+        );
+        tokenTraits[tokenIdCounter] = attributes;
+        _mint(msg.sender, tokenIdCounter);
+        emit Minted(
+            tokenIdCounter,
+            msg.sender,
+            energy,
+            speed,
+            experience,
+            health,
+            gem,
+            rare
+        );
+        tokenIdCounter++;
     }
 
     function getTraits(uint256 tokenId) external view returns (Traits memory) {
